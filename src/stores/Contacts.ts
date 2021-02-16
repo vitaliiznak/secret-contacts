@@ -1,40 +1,53 @@
-import { action, makeObservable, observable, toJS } from 'mobx'
+import { action, makeObservable, observable } from 'mobx'
 import { v4 as uuidv4 } from 'uuid'
 import * as crypto from 'crypto'
-import * as util from 'util'
+import * as fs from 'fs'
 import Root from './Root'
 
-const scryptP = util.promisify(crypto.scrypt)
-console.log('scryptP', scryptP)
+import { scryptSync } from 'crypto'
 
 export default class Contacts {
-  public root: Root;
-
   public filePath?: string | null;
-
-  public encKey?: string;
-
-  constructor(root: Root) {
-    this.root = root
-    makeObservable(this, {
-      filePath: observable,
-      encKey: observable,
-    })
-  }
-
-  contacts: Array<{
+  public activeContactId?: string;
+  public contacts: Array<{
     id: string;
     name: string;
     phone: string;
     email: string;
     address: string;
-  }> = observable([]);
+  }> = [];
+  constructor(root: Root) {
+    this.root = root
+    makeObservable(this, {
+      filePath: observable,
+      activeContactId: observable,
+      contacts: observable
+    })
+  }
+  public root: Root;
+  public encKey?: Buffer;
+  public salt?: Buffer;
 
-  public enter = action((filePath: string | null | undefined) => {
-    console.log('store filePath', filePath)
-    this.filePath = filePath
-    console.log(' this.filePath', this.filePath)
-  });
+
+  public enter = action(async ({ password, filepath, isNew }: { password: string, filepath: string, isNew: boolean }) => {
+    if (!isNew) {
+      const fileBuffer = fs.readFileSync(filepath)
+      const oldSalt = fileBuffer.slice(0, 16)
+      const oldEncKey = scryptSync(password, oldSalt, 24)
+      const content = this.decrypt(
+        fileBuffer.slice(16 + 16, fileBuffer.length),
+        oldEncKey,
+        fileBuffer.slice(16, 16 + 16))
+      const contentObject = JSON.parse(content.toString('utf-8'))
+      if (Array.isArray(contentObject)) { ///refactor structural pattern
+        this.contacts = contentObject
+      }
+    }
+    this.salt = crypto.randomBytes(16)
+    this.encKey = scryptSync(password, this.salt, 24)
+    this.filePath = filepath
+  })
+
 
   public create = action(
     (values: {
@@ -42,30 +55,78 @@ export default class Contacts {
       phone: string;
       email: string;
       address: string;
-    }): void => {
-      this.contacts.push({
+    }): {
+      id: string
+      name: string;
+      phone: string;
+      email: string;
+      address: string;
+    } => {
+      const newContact = {
         id: uuidv4(),
         ...values,
-      })
+      }
+      this.contacts = [...this.contacts, newContact]
+      return newContact
     }
-  );
+  )
 
-  public createEncKey = action(async (password: string) => {
-    console.log('password', password)
-    try {
-      this.encKey = (await scryptP(password, 'SOME_SALT', 2)) as string
-      console.log('encKey', this.encKey)
-    } catch (err) {
-      console.log(err)
+  public saveToFile = async (): Promise<void> => {
+    const errors = []
+    if (!this.encKey) {
+      errors.push('encKey is not provided')
     }
-  });
+    if (!this.filePath) {
+      errors.push('filePath is not provided')
+    }
+    if (!this.filePath) {
+      errors.push('salt is not provided')
+    }
+    if (errors.length > 0) {
+      throw Error(errors.join(';\n'))
+    }
 
-  public logout = () => {
-    console.info('user had been loged out')
-    window.location.href = '/'
+    const encryptedFinal = this.encrypt(JSON.stringify(this.contacts), this.encKey!)
+
+    fs.writeFileSync(this.filePath!, Buffer.concat([this.salt!, encryptedFinal]))
+  }
+
+  public getById = (idArg: string): {
+    id: string
+    name: string;
+    phone: string;
+    email: string;
+    address: string;
+  } | null => {
+    return this.contacts.find(({ id }) => id === idArg) || null
+  }
+
+  public exit = async () => {
+    this.filePath = undefined
+    this.encKey = undefined
+    this.salt = undefined
+    this.activeContactId = undefined
+    this.contacts = []
   };
 
   public init = async () => {
-    console.log('init')
+    console.info('init')
   };
+
+
+  /* Private functions */
+  private encrypt = (data: Buffer | string, encKey: Buffer): Buffer => {
+    const iv = crypto.randomBytes(16)
+    const cipher = crypto.createCipheriv('aes-192-cbc', encKey, iv)
+    const encrypted = cipher.update(data)
+    return Buffer.concat([iv, encrypted, cipher.final()])
+  }
+
+
+  private decrypt = ((encrypted: Buffer, encKey: Buffer, iv: Buffer) => {
+    const decipher = crypto.createDecipheriv('aes-192-cbc', encKey, iv)
+    const decrypted = decipher.update(encrypted)
+    return Buffer.concat([decrypted, decipher.final()])
+  });
+
 }

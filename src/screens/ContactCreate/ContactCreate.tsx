@@ -1,7 +1,8 @@
 import { css } from '@emotion/css'
 import { Form, Input, Button } from 'antd'
 import React from 'react'
-import { useStore } from '../../../stores/rootContext'
+import { useHistory } from 'react-router-dom'
+import { useStore } from '../../stores/rootContext'
 
 
 type PropsForm =  React.ComponentProps<typeof Form>
@@ -13,7 +14,8 @@ const ContactCreate = ({
   const {
     contactsStore: { create }
   } = useStore()
-  
+  const history = useHistory()
+
   const [form] = Form.useForm()
 
   const onFinish = (values: {
@@ -22,8 +24,8 @@ const ContactCreate = ({
     email: string
     address: string
   }) => {
-
-    create(values)
+    const newContact = create(values)
+    history.push(`/${newContact.id}`)
   }
 
   return (
@@ -34,16 +36,16 @@ const ContactCreate = ({
       <Form.Item name="phone" label="Phone" rules={[{ required: true }]}>
         <Input />
       </Form.Item>
-      <Form.Item name="email" label="Email" rules={[{ required: true }]}>
+      <Form.Item name="email" label="Email" rules={[{ required: true }, {type: 'email'}]}>
         <Input />
       </Form.Item>
       <Form.Item name="address" label="Address" rules={[{ required: true }]}>
         <Input />
       </Form.Item>
-   
+
       <div className={css`display: flex; justify-content: flex-end;`}>
         <Button htmlType="submit" ghost type="primary" >
-          Submit
+          Add
         </Button>
       </div>
     </Form>

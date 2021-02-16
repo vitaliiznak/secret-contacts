@@ -5,19 +5,15 @@ configure({
   enforceActions: 'always'
 })
 export class Root {
-  @observable public ready = false
+
 
   public stores = {
-    rootStore: this,
+    rootStore: this as Root,
     contactsStore: new Contacts(this)
   }
 
-  public init = async () => {
+  public init = async (): Promise<void> => {
     await this.stores.contactsStore.init()
-    await Promise.all([])
-    runInAction(() => {
-      this.ready = true
-    })
   }
 }
 
