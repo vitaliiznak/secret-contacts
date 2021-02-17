@@ -1,4 +1,4 @@
-import { action, makeObservable, observable } from 'mobx'
+import { action, makeObservable, observable, toJS } from 'mobx'
 import { v4 as uuidv4 } from 'uuid'
 import * as crypto from 'crypto'
 import * as fs from 'fs'
@@ -48,7 +48,6 @@ export default class Contacts {
     this.filePath = filepath
   })
 
-
   public create = action(
     (values: {
       name: string;
@@ -71,25 +70,27 @@ export default class Contacts {
     }
   )
 
-  public saveToFile = async (): Promise<void> => {
-    const errors = []
-    if (!this.encKey) {
-      errors.push('encKey is not provided')
+  public update = action((id: string, values: {
+    name: string;
+    phone: string;
+    email: string;
+    address: string;
+  }): {
+    id: string
+    name: string;
+    phone: string;
+    email: string;
+    address: string;
+  } => {
+    const indexToEdit = this.contacts.findIndex(({ id: recordId }) => id === recordId)
+    if (indexToEdit < 0) {
+      throw new Error(`Contact with id ${id} does not exist`)
     }
-    if (!this.filePath) {
-      errors.push('filePath is not provided')
-    }
-    if (!this.filePath) {
-      errors.push('salt is not provided')
-    }
-    if (errors.length > 0) {
-      throw Error(errors.join(';\n'))
-    }
-
-    const encryptedFinal = this.encrypt(JSON.stringify(this.contacts), this.encKey!)
-
-    fs.writeFileSync(this.filePath!, Buffer.concat([this.salt!, encryptedFinal]))
-  }
+    const newContacts = this.contacts.slice()
+    newContacts[indexToEdit] = { id, ...values }
+    this.contacts = newContacts
+    return this.contacts[indexToEdit]
+  })
 
   public getById = (idArg: string): {
     id: string
@@ -113,6 +114,25 @@ export default class Contacts {
     console.info('init')
   };
 
+  public saveToFile = async (): Promise<void> => {
+    const errors = []
+    if (!this.encKey) {
+      errors.push('encKey is not provided')
+    }
+    if (!this.filePath) {
+      errors.push('filePath is not provided')
+    }
+    if (!this.filePath) {
+      errors.push('salt is not provided')
+    }
+    if (errors.length > 0) {
+      throw Error(errors.join(';\n'))
+    }
+
+    const encryptedFinal = this.encrypt(JSON.stringify(this.contacts), this.encKey!)
+
+    fs.writeFileSync(this.filePath!, Buffer.concat([this.salt!, encryptedFinal]))
+  }
 
   /* Private functions */
   private encrypt = (data: Buffer | string, encKey: Buffer): Buffer => {

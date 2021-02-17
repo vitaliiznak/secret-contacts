@@ -1,14 +1,16 @@
 import { css } from '@emotion/css'
-import { Form } from 'antd'
+import { Button, Form, Space, Typography } from 'antd'
 import React from 'react'
-import { Redirect, useParams } from 'react-router-dom'
+import { Redirect, useHistory, useParams } from 'react-router-dom'
 import { useStore } from '../../stores/rootContext'
 
+const { Text } = Typography
 type PropsForm =  React.ComponentProps<typeof Form>
 const ContactView = (): React.ReactElement => {
   const {
     contactsStore: { getById }
   } = useStore()
+  const history = useHistory()
   const { id } = useParams<{id: string}>()
   const contact = getById(id)
 
@@ -16,14 +18,18 @@ const ContactView = (): React.ReactElement => {
     return <Redirect to="/"/>
   }
   return (
-    <p>
-      name: {contact.name} <br/>
-      email: {contact.email} <br/>
-      phone: {contact.phone} <br/>
-      address: {contact.address} <br/>
-      id: <small className={css`font-size: 9px;`}>{contact.id} </small>
-    </p>
-
+    <>
+      <div className={css`margin-bottom: 8px;`}>
+        <Space direction="vertical">
+          <Text type="secondary"> name: {contact.name}</Text>
+          <Text type="secondary"> email: {contact.email} <br/></Text>
+          <Text type="secondary"> phone: {contact.phone} <br/></Text>
+          <Text type="secondary"> address: {contact.address} <br/></Text>
+          <Text type="secondary">id: <small className={css`font-size: 9px;`}>{contact.id} </small></Text>
+        </Space>
+      </div>
+      <Button ghost type="primary"  onClick={()=> history.push(`${id}/edit`)}>Edit</Button>
+    </>
   )
 }
 

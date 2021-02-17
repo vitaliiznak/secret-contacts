@@ -1,4 +1,4 @@
-import { configure, observable, runInAction } from 'mobx'
+import { configure } from 'mobx'
 import Contacts from './Contacts'
 
 configure({
