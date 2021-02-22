@@ -15,7 +15,7 @@ export default class Contacts {
     phone: string;
     email: string;
     address: string;
-  }> = [];
+  }> = observable.array([]);
   constructor(root: Root) {
     this.root = root
     makeObservable(this, {
@@ -65,7 +65,7 @@ export default class Contacts {
         id: uuidv4(),
         ...values,
       }
-      this.contacts = [...this.contacts, newContact]
+      this.contacts.push(newContact)
       return newContact
     }
   )
@@ -86,9 +86,7 @@ export default class Contacts {
     if (indexToEdit < 0) {
       throw new Error(`Contact with id ${id} does not exist`)
     }
-    const newContacts = this.contacts.slice()
-    newContacts[indexToEdit] = { id, ...values }
-    this.contacts = newContacts
+    this.contacts[indexToEdit] = { id, ...values }
     return this.contacts[indexToEdit]
   })
 
@@ -102,12 +100,15 @@ export default class Contacts {
     return this.contacts.find(({ id }) => id === idArg) || null
   }
 
-  public exit = async () => {
+  public exit = async (withSave?: boolean): Promise<void> => {
+    if (withSave) {
+      await this.saveToFile()
+    }
     this.filePath = undefined
     this.encKey = undefined
     this.salt = undefined
     this.activeContactId = undefined
-    this.contacts = []
+    this.contacts = observable.array([])
   };
 
   public init = async () => {

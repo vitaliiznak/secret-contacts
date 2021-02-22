@@ -12,13 +12,6 @@ const AuthProcess = () => {
     contactsStore: { filePath },
   } = useStore()
 
-  let Screen
-  if (filePath === undefined) {
-    Screen = StorageChoose
-  } else {
-    Screen = RouterAuthenteticated
-  }
-
   return (
     <Layout
       className={css`
@@ -33,7 +26,7 @@ const AuthProcess = () => {
         `}
       >
         <h1>Secret contacts</h1>
-        <Screen />
+        {filePath === undefined ? <StorageChoose/> : <RouterAuthenteticated/> }
       </div>
     </Layout>
   )

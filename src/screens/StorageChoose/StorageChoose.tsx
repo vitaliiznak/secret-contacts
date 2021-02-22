@@ -36,6 +36,7 @@ const StorageChoose = ({className = ''}: {
           title: 'File or password invalid please try another one',
           onOk: () => {
             form.resetFields()
+            setFilePath('')
           }
         })
       })

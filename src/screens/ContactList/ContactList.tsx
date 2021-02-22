@@ -31,7 +31,7 @@ const ContactList = ({className = ''}: {
           New
         </Button></div> }
       bordered
-      dataSource={contacts}
+      dataSource={contacts.slice()}
       renderItem={({id, name, email}) => <List.Item className={css`width: 100%;display: block;`}>
         <Link to={`/${id}`} className={css`display: block; width: 100%;`}>
           <div>
